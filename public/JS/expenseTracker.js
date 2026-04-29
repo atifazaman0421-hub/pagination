@@ -28,13 +28,14 @@ const expensePrevBtn = document.getElementById("expensePrevBtn");
 const expenseNextBtn = document.getElementById("expenseNextBtn");
 const expensePageInfo = document.getElementById("expensePageInfo");
  
-// ✅ FIX: Separate page state for income and expense
 let incomeCurrentPage = 1;
 let expenseCurrentPage = 1;
 let incomeTotalPages = 1;
 let expenseTotalPages = 1;
  
-const limit = 5;
+function getLimit() {
+  return Number(document.getElementById("rowPerPage").value) || 5;
+}
 
 const categoryIcons = {
   food: "🍔",
@@ -65,7 +66,7 @@ filterType.addEventListener("change", () => {
 
   const selectedFilter = filterType.value;
 
-  // 🚫 BLOCK non-premium users
+
   if (
     (selectedFilter === "monthly" || selectedFilter === "yearly") &&
     !isPremium
@@ -78,7 +79,6 @@ filterType.addEventListener("change", () => {
     return;
   }
 
-  // ✅ allow
   currentFilter = selectedFilter;
   currentDate = new Date();
   incomeCurrentPage = 1;
@@ -146,21 +146,21 @@ li.append(left, amount, editBtn, deleteBtn);
 async function loadData() {
   try {
     const token = localStorage.getItem("token");
+    const limit = getLimit();
     const baseParams = `filter=${currentFilter}&date=${currentDate.getTime()}&search=${searchQuery}`;
  
-    // ✅ Fetch income page
+    
     const incomeRes = await axios.get(
       `${BASE_URL}?${baseParams}&typeSelect=income&page=${incomeCurrentPage}&limit=${limit}`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
  
-    // ✅ Fetch expense page
+    
     const expenseRes = await axios.get(
       `${BASE_URL}?${baseParams}&typeSelect=expense&page=${expenseCurrentPage}&limit=${limit}`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
  
-    // ✅ Fetch totals (no pagination — backend returns aggregated totals)
     const totalsRes = await axios.get(
       `${BASE_URL}/totals?${baseParams}`,
       { headers: { Authorization: `Bearer ${token}` } }
@@ -170,16 +170,16 @@ async function loadData() {
     const expenseData = expenseRes.data || {};
     const totalsData = totalsRes.data || {};
  
-    // ✅ Update separate pagination state
+  
     incomeTotalPages = incomeData.totalPages || 1;
     expenseTotalPages = expenseData.totalPages || 1;
  
-    // ✅ Update income pagination UI
+
     incomePageInfo.textContent = `Page ${incomeCurrentPage} of ${incomeTotalPages}`;
     incomePrevBtn.disabled = incomeCurrentPage === 1;
     incomeNextBtn.disabled = incomeCurrentPage === incomeTotalPages;
  
-    // ✅ Update expense pagination UI
+    
     expensePageInfo.textContent = `Page ${expenseCurrentPage} of ${expenseTotalPages}`;
     expensePrevBtn.disabled = expenseCurrentPage === 1;
     expenseNextBtn.disabled = expenseCurrentPage === expenseTotalPages;
@@ -215,7 +215,7 @@ async function loadData() {
     incomeContainer.style.display = showDaily ? "block" : "none";
     expenseContainer.style.display = showDaily ? "block" : "none";
  
-    // ✅ FIX: Use totals from the dedicated totals endpoint — not paginated rows
+   
     document.getElementById("totalIncome").textContent =
       (totalsData.totalIncome || 0).toFixed(2);
     document.getElementById("totalExpense").textContent =
@@ -263,6 +263,14 @@ if (
   updateDateUI();
   loadData();
 });
+
+document.getElementById("rowPerPage").addEventListener("change", () => {
+  incomeCurrentPage = 1;
+  expenseCurrentPage = 1;
+  loadData();
+});
+
+
 async function add(obj) {
   try {
     formContainer.style.display = "none";
@@ -830,8 +838,7 @@ incomeNextBtn.addEventListener("click", () => {
     loadData();
   }
 });
- 
-// ✅ Separate pagination listeners for expense
+
 expensePrevBtn.addEventListener("click", () => {
   if (expenseCurrentPage > 1) {
     expenseCurrentPage--;
